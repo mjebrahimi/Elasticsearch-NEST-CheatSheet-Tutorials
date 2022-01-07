@@ -444,8 +444,9 @@ namespace Sample
                 Id id4 = Id.From(post1);        //implicit cast from object (equals to new Id(post1))
                 #endregion
 
-                #region IndexDescriptor<TDocument> => Create a IndexRequest<TDocument> (implictly converted)
                 var indexName = IndexName.From<Post>();
+
+                #region IndexDescriptor<TDocument> => Create a IndexRequest<TDocument> (implictly converted)
                 var id = Id.From(post1);
                 IndexDescriptor<Post> indexDescriptor1 = new IndexDescriptor<Post>();                       // /{index}/_doc (retrive indexName from (IndexName)typeof(TDocument))
                 IndexDescriptor<Post> indexDescriptor2 = new IndexDescriptor<Post>(indexName);              // /{index}/_doc
@@ -674,7 +675,7 @@ namespace Sample
                 //MatchPhrase:      analyzed        - matched only if the terms come in the same order - all the terms must appear in the field as the same order as the input value
                 //QueryString:      query in elasticsearch syntax
                 //Prefix            NOT analyzed    - match exactly (similar to term) but start with specified prefix
-                //MatchPhrase       analyzed        - similar to MatchPhrase but start with specified prefix
+                //MatchPhrasePrefix analyzed        - similar to MatchPhrase but start with specified prefix
                 //MultiMatch        analyzed        - similar to Match but applies on multiple fields
                 //Bool              applies multiple queris - Must (AND) - Should (OR) - MustNot (NOT) - Filter (similar to must but not effect on score)
                 //Range, LongRange, DateRange, TermRange
@@ -812,8 +813,6 @@ namespace Sample
                 //    .IgnoreThrottled(true)
                 //    .IgnoreUnavailable(true)
                 //);
-
-
                 #endregion
 
                 //https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-match-all-query.html

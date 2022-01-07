@@ -1563,4 +1563,338 @@
 - https://stackoverflow.com/questions/26001002/elasticsearch-difference-between-term-match-phrase-and-query-string
 - https://stackoverflow.com/questions/42451527/difference-between-match-and-multimatch-query-type-in-elasticsearch
 
+# ElasticSearch Important Tips Summary
 
+## Some Tips
+
+1. Using logical operators (&&, !, ||, +) instead of (Must, MustNot, Should, Filter) is simpler but more prone to bug and a little trickly. Indeed It is easier to use logical operators, but if you are not careful enough you can easily make a mistake.
+2. Using Filter (instead of Must) can be useful in improving performance where the relevancy score for the query is not required to affect the order of results.
+3. Do not use Term for checking with null (is null or is not null). instead use Exists for checking with null.
+4. If you whant to null check a term fields. use null_value option to indexing null values.
+5. Use doc_values=false when you don't need to sort or aggregate on a field. 
+6. Use index=false when you don't need to search on a field.
+7. Use norms=false when you don't need to scoring on a field.
+
+## object
+
+JSON documents are hierarchical in nature: the document may contain inner objects which, in turn, may contain inner objects themselves.
+
+But elasticsearch has no concept of inner objects. Therefore, it flattens object hierarchies into a simple list of field names and values.
+
+Object is default type for any undefined types, so you are not required to set the field type to object explicitly.
+
+If you need to index arrays of objects instead of single objects, read Nested first.
+
+The following parameters are accepted by object fields:
+
+- **dynamic**
+
+    Whether or not new properties should be added dynamically to an existing object. Accepts true (default), runtime, false and strict.
+- **enabled**
+
+    Whether the JSON value given for the object field should be parsed and indexed (true, default) or completely ignored (false).
+
+- **properties**
+
+    The fields within the object, which can be of any data type, including object. New properties may be added to an existing object.
+
+## nested
+
+Elasticsearch has no concept of inner objects. Therefore, it flattens object hierarchies into a simple list of field names and values.
+
+The nested type is a specialised version of the object data type that allows arrays of objects to be indexed in a way that they can be queried independently of each other.
+
+When you need to index arrays of objects and query them independently consider to use Nested.
+
+If you use Must (And &&), Filter (+) query on inner types that is not nested, queries would match incorrectly documents.
+
+Nested types can not be queried in non-nested queries. Do not forget to use AutoMap when mapping Nested() with attribute mapping in for inner properties.
+
+When ingesting key-value pairs with a large, arbitrary set of keys, you might consider modeling each key-value pair as its own nested document with key and value fields.
+
+Instead, consider using the flattened data type, which maps an entire object as a single field and allows for simple searches over its contents.
+
+Nested documents and queries are typically expensive, so using the flattened data type for this use case is a better option.
+
+Nested documents can be:
+
+- queried with the nested query.
+- analyzed with the nested and reverse_nested aggregations.
+- sorted with nested sorting.
+- retrieved and highlighted with nested inner hits.
+
+Because nested documents are indexed as separate documents, they can only be accessed within the scope of the nested query, the nested/reverse_nested aggregations, or nested inner hits.
+
+For instance, if a string field within a nested document has index_options set to offsets to allow use of the postings during the highlighting, these offsets will not be available during the main highlighting phase.
+
+Instead, highlighting needs to be performed via nested inner hits. The same consideration applies when loading fields during a search through docvalue_fields or stored_fields.
+
+The following parameters are accepted by nested fields:
+
+- **dynamic**
+
+    (Optional, string) Whether or not new properties should be added dynamically to an existing nested object. Accepts true (default), false and strict.
+
+- **properties**
+
+    (Optional, object) The fields within the nested object, which can be of any data type, including nested. New properties may be added to an existing nested object.
+
+- **include_in_parent**
+
+    (Optional, Boolean) If true, all fields in the nested object are also added to the parent document as standard (flat) fields. Defaults to false.
+
+- **include_in_root**
+
+    (Optional, Boolean) If true, all fields in the nested object are also added to the root document as standard (flat) fields. Defaults to false.
+
+## flattened
+
+By default, each subfield in an object is mapped and indexed separately.
+
+If the names or types of the subfields are not known in advance, then they are mapped dynamically.
+
+The flattened type provides an alternative approach, where the entire object is mapped as a single field.
+
+Given an object, the flattened mapping will parse out its leaf values and index them into one field as keywords.
+
+The object’s contents can then be searched through simple queries and aggregations.
+
+This data type can be useful for indexing objects with a large or unknown number of unique keys.
+
+Only one field mapping is created for the whole JSON object, which can help prevent a mappings explosion from having too many distinct field mappings.
+
+On the other hand, flattened object fields present a trade-off in terms of search functionality. Only basic queries are allowed, with no support for numeric range queries or highlighting.
+
+Further information on the limitations can be found in the Supported operations section.
+
+The flattened mapping type should not be used for indexing all document content, as it treats all values as keywords and does not provide full search functionality.
+
+The default approach, where each subfield has its own entry in the mappings, works well in the majority of cases.
+
+## keyword
+
+keyword, which is used for structured content such as IDs, email addresses, hostnames, status codes, zip codes, or tags.
+
+Keyword fields are often used in sorting, aggregations, and term-level queries, such as term.
+
+Avoid using keyword fields for full-text search. Use the text field type instead.
+Not all numeric data should be mapped as a numeric field data type.
+
+Elasticsearch optimizes numeric fields, such as integer or long, for range queries.
+
+However, keyword fields are better for term and other term-level queries.
+Identifiers, such as an ISBN or a product ID, are rarely used in range queries.
+
+ However, they are often retrieved using term-level queries.
+Consider mapping a numeric identifier as a keyword if:
+
+You don’t plan to search for the identifier data using range queries.
+Fast retrieval is important. term query searches on keyword fields are often faster than term searches on numeric fields.
+
+If you’re unsure which to use, you can use a multi-field to map the data as both a keyword and a numeric data type.
+
+**Conclusion**:
+
+1. keyword data type is optimized for term-level (or sorting/aggregation) queries.
+2. Use keyword datatype for fields that you would like to use term-level (or sorting/aggregation) queries on that.
+3. If use range queries on numeric fields use numeric types (long, ...)
+4. Else if use term-level (or sorting/aggregation) queries on numeric fields, use keyword data type instead.
+5. If you’re unsure which to use, you can use a multi-field to map the data as both a keyword and a numeric data type.
+
+## text
+
+The popular type for full-text content such as the body of an email or the description of a product.
+
+Text fields are not used for sorting and seldom used for aggregations. (not optimized for this, use keyword instead)
+
+Field data is the only way to access the analyzed tokens from a full text field in aggregations, sorting, or scripting. For example, a full text field like New York would get analyzed as new and york. To aggregate on these tokens requires field data.
+
+https://www.elastic.co/guide/en/elasticsearch/reference/current/text.html#fielddata-mapping-param
+
+## analyzer
+
+The analyzer which should be used for the text field, both at index-time and at search-time (unless overridden by the search_analyzer).
+
+Defaults to the default index analyzer, or the standard analyzer.
+
+## normalizer
+
+The normalizer property of keyword fields is similar to analyzer for text fields and applied prior to indexing the keyword, as well as at search-time when the keyword field is searched via a query parser such as the match query or via a term-level query such as the term query.
+
+A simple normalizer called lowercase ships with elasticsearch and can be used. Custom normalizers can be defined as part of analysis settings as follows.
+
+## boost
+
+Mapping field-level query time boosting. Accepts a floating point number, defaults to 1.0. **Deprecated in 5.0.0.**
+
+Index time boost is deprecated. Instead, the field mapping boost is applied at query time. For indices created before 5.0.0, the boost will still be applied at index time.
+
+**Why index time boosting is a bad idea**
+
+We advise against using index time boosting for the following reasons:
+You cannot change index-time boost values without reindexing all of your documents.
+
+Every query supports query-time boosting which achieves the same effect. The difference is that you can tweak the boost value without having to reindex.
+
+Index-time boosts are stored as part of the norm, which is only one byte. This reduces the resolution of the field length normalization factor which can lead to lower quality relevance calculations.
+
+## doc_values
+
+Should the field be stored on disk in a column-stride fashion, so that it can later be used for sorting, aggregations, or scripting? Accepts true (default) or false.
+
+All fields which support doc values have them enabled by default. If you are sure that you don’t need to sort or aggregate on a field, or access the field value from a script, you can disable doc values in order to save disk space
+
+## eager_global_ordinals
+
+Should global ordinals be loaded eagerly on refresh? Accepts true or false (default).
+Enabling this is a good idea on fields that are frequently used for terms aggregations.
+
+## fields
+
+Multi-fields allow the same string value to be indexed in multiple ways for different purposes, This is the purpose of multi-fields.
+
+For instance, a string field could be mapped as a text field for full-text search, and as a keyword field for sorting or aggregations.
+
+Another use case of multi-fields is to analyze the same field in different ways for better relevance.
+
+For instance we could index a field with the standard analyzer which breaks text up into words, and again with the english analyzer which stems words into their root form
+
+## ignore_above
+
+Do not index any string longer than this value. Defaults to 2147483647 so that all values would be accepted.
+
+Please however note that default dynamic mapping rules create a sub keyword field that overrides this default by setting ignore_above: 256.
+
+Strings longer than the ignore_above setting will not be indexed or stored.
+
+For arrays of strings, ignore_above will be applied for each array element separately and string elements longer than ignore_above will not be indexed or stored.
+
+## index
+
+Should the field be searchable? Accepts true (default) or false. Fields that are not indexed are not queryable.
+
+## index_phrases
+
+If enabled, two-term word combinations (shingles) are indexed into a separate field.
+
+This allows exact phrase queries (no slop) to run more efficiently, at the expense of a larger index.
+
+Note that this works best when stopwords are not removed, as phrases containing stopwords will not use the subsidiary field and will fall back to a standard phrase query. Accepts true or false (default).
+
+## position_increment_gape
+
+Analyzed text fields take term positions into account, in order to be able to support proximity or phrase queries.
+
+When indexing text fields with multiple values a "fake" gap is added between the values to prevent most phrase queries from matching across the values.
+
+The size of this gap is configured using position_increment_gap and defaults to 100.
+
+## index_prefixese
+
+The index_prefixes parameter enables the indexing of term prefixes to speed up prefix searches.
+
+It accepts the following optional settings:
+
+- **min_chars:**
+
+    The minimum prefix length to index. Must be greater than 0, and defaults to 2. The value is inclusive.
+
+- **max_chars:**
+
+    The maximum prefix length to index. Must be less than 20, and defaults to 5. The value is inclusive.
+
+## index_options
+
+The index_options parameter controls what information is added to the inverted index for search and highlighting purposes.
+
+The index_options parameter is intended for use with text fields only. Avoid using index_options with other field data types. (it can be used for keyword data type too!)
+
+Use index_options [positions] for normal searching that supports [frequencies] to score highest repeated terms, also supports [positions] can be used for proximity or phrase queries.
+
+Use [offsets] that is the most complete and also supports [ofsets] which are used by the unified highlighter to speed up highlighting.
+
+## norms
+
+Norms store various normalization factors that are later used at query time in order to compute the score of a document relatively to a query.
+
+if you don’t need scoring on a specific field, you should disable norms on that field. In particular, this is the case for fields that are used solely for filtering or aggregations.
+
+## null_value
+
+A null value cannot be indexed or searched. When a field is set to null, (or an empty array or an array of null values) it is treated as though that field has no values.
+
+The null_value parameter allows you to replace explicit null values with the specified value so that it can be indexed and searched.
+
+The null_value needs to be the same data type as the field. For instance, a long field cannot have a string null_value.
+
+The null_value only influences how data is indexed, it doesn’t modify the _source document.
+
+## store
+
+Whether the field value should be stored and retrievable separately from the _source field. Accepts true or false (default).
+
+By default, field values are indexed to make them searchable, but they are not stored. This means that the field can be queried, but the original field value cannot be retrieved.
+
+Usually this doesn’t matter. The field value is already part of the _source field, which is stored by default.
+
+If you only want to retrieve the value of a single field or of a few fields, instead of the whole _source, then this can be achieved with source filtering.
+
+https://www.elastic.co/guide/en/elasticsearch/reference/current/search-fields.html#source-filtering
+
+In certain situations it can make sense to store a field. For instance, if you have a document with a title, a date, and a very large content field, you may want to retrieve just the title and the date without having to extract those fields from a large _source field
+
+Stored fields returned as arrays:
+
+For consistency, stored fields are always returned as an array because there is no way of knowing if the original field value was a single value, multiple values, or an empty array.
+
+If you need the original value, you should retrieve it from the _source field instead.
+
+## similarity
+
+Which scoring algorithm or similarity should be used. Defaults to BM25.
+
+## analyzer
+
+Only text fields support the analyzer mapping parameter.
+
+The analyzer parameter specifies the analyzer used for text analysis when indexing or searching a text field.
+
+Unless overridden with the search_analyzer mapping parameter, this analyzer is used for both index and search analysis.
+
+## search_analyzere
+
+Usually, the same analyzer should be applied at index time and at search time, to ensure that the terms in the query are in the same format as the terms in the inverted index.
+
+Sometimes, though, it can make sense to use a different analyzer at search time, such as when using the edge_ngram tokenizer for autocomplete or when using search-time synonyms.
+
+By default, queries will use the analyzer defined in the field mapping, but this can be overridden with the search_analyzer setting
+
+## search_quote_analyzer
+
+The search_quote_analyzer setting allows you to specify an analyzer for phrases, this is particularly useful when dealing with disabling stop words for phrase queries.
+
+To disable stop words for phrases a field utilising three analyzer settings will be required:
+
+1. An analyzer setting for indexing all terms including stop words
+2. A search_analyzer setting for non-phrase queries that will remove stop words
+3. A search_quote_analyzer setting for phrase queries that will not remove stop words
+
+## term_vectore
+
+Term vectors contain information about the terms produced by the analysis process, including:
+
+- a list of terms.
+- the position (or order) of each term.
+- the start and end character offsets mapping the term to its origin in the original string.
+- payloads (if they are available) — user-defined binary data associated with each term position.
+These term vectors can be stored so that they can be retrieved for a particular document.
+The term_vector setting accepts:
+- no: No term vectors are stored. (default)
+- yes: Just the terms in the field are stored.
+- with_positions: Terms and positions are stored.
+- **with_offsets**: Terms and character offsets are stored.
+- **with_positions_offsets**: Terms, positions, and character offsets are stored.
+- **with_positions_payloads**: Terms, positions, and payloads are stored.
+- **with_positions_offsets_payloads**:  Terms, positions, offsets and payloads are stored.
+The fast vector highlighter requires with_positions_offsets. The term vectors API can retrieve whatever is stored.
+Setting with_positions_offsets will double the size of a field’s index.
