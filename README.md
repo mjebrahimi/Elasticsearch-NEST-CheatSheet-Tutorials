@@ -1231,6 +1231,12 @@
   - https://www.elastic.co/guide/en/elasticsearch/client/net-api/current/metric-aggregations.html
   - https://www.elastic.co/guide/en/elasticsearch/client/net-api/current/pipeline-aggregations.html
   - https://www.elastic.co/guide/en/elasticsearch/client/net-api/current/matrix-aggregations.html
+- Group By Count
+  - https://john.soban.ski/aggregations-the-elasticsearch-group-by.html
+  - https://discuss.elastic.co/t/can-elasticsearch-do-group-by-multi-fields-and-order-by-count/176128/2
+  - https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-terms-aggregation.html
+  - https://www.elastic.co/guide/en/elasticsearch/client/net-api/current/terms-aggregation-usage.html
+  - https://www.elastic.co/guide/en/elasticsearch/client/net-api/current/missing-aggregation-usage.html
 
 ### Buket Aggregations (Group By)
 - **Range**
